@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejecutar SP</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #2193b0, #ff4757);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            color: white;
+            max-width: 400px;
+            width: 100%;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: none;
+            font-size: 16px;
+        }
+        button {
+            background-color: #ff6b6b;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background-color: #ff4757;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <h2>Insertar Personas</h2>
+            <form @submit.prevent="insertarPersonas">
+                <input type="number" v-model="cantidad" placeholder="Cantidad de personas" min="1" required>
+                
+                <select v-model="genero">
+                    <option value="">Cualquier Género</option>
+                    <option value="M">Masculino</option>
+                    <option value="F">Femenino</option>
+                    <option value="N/B">No Binario</option>
+                </select>
+                
+                <input type="date" v-model="fechaInicio" required>
+                <input type="date" v-model="fechaFin" required>
+
+                <button type="submit">Insertar Personas</button>
+            </form>
+            <button @click="abrirFormularioUsuario">Insertar Usuario</button>
+            <button @click="asignarRoles">Asignar Roles</button>
+            <button @click="limpiarPersonas" style="background-color: #ff4444;">🗑️ Limpiar Tabla</button>
+        </div>
+    </div>
+
+    <script>
+        const app = Vue.createApp({
+            data() {
+                return {
+                    cantidad: '',
+                    genero: '',
+                    fechaInicio: '',
+                    fechaFin: ''
+                };
+            },
+            methods: {
+                async insertarPersonas() {
+                    if (!this.cantidad || !this.fechaInicio || !this.fechaFin) {
+                        Swal.fire('Error', 'Todos los campos son obligatorios.', 'error');
+                        return;
+                    }
+
+                    if (new Date(this.fechaInicio) > new Date(this.fechaFin)) {
+                        Swal.fire('Error', 'La fecha de inicio no puede ser posterior a la fecha de fin.', 'error');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await axios.post('http://127.0.0.1:3000/insertar-personas', {
+                            cantidad: this.cantidad,
+                            genero: this.genero,
+                            fechaInicio: this.fechaInicio,
+                            fechaFin: this.fechaFin
+                        });
+
+                        Swal.fire('Éxito', response.data.message, 'success');
+                    } catch (error) {
+                        Swal.fire('Error', 'Hubo un problema con la inserción.', 'error');
+                    }
+                },
+                async asignarRoles() {
+                    try {
+                        const response = await axios.post('http://127.0.0.1:3000/asignar-roles');
+                        Swal.fire('Éxito', response.data.message, 'success');
+                    } catch (error) {
+                        Swal.fire('Error', 'Hubo un problema al asignar roles.', 'error');
+                    }
+                },
+                async limpiarPersonas() {
+                    Swal.fire({
+                        title: "¿Estás seguro?",
+                        text: "Esto eliminará todos los registros de la tabla de personas.",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonColor: "#d33",
+                        cancelButtonColor: "#3085d6",
+                        confirmButtonText: "Sí, eliminar",
+                        cancelButtonText: "Cancelar"
+                    }).then(async (result) => {
+                        if (result.isConfirmed) {
+                            try {
+                                const response = await axios.delete("http://127.0.0.1:3000/limpiar-personas");
+                                Swal.fire("Eliminado", response.data.message, "success");
+                            } catch (error) {
+                                Swal.fire("Error", "Hubo un problema al limpiar la tabla.", "error");
+                            }
+                        }
+                    });
+                },
+                abrirFormularioUsuario() {
+                    Swal.fire({
+                        title: "Insertar Usuario",
+                        html: `
+                            <input id="cantidad" type="number" placeholder="Cantidad" class="swal2-input">
+                            <input id="tipo_usuario" type="text" placeholder="Tipo de usuario" class="swal2-input">
+                            <input id="edad_minima" type="number" placeholder="Edad mínima" class="swal2-input">
+                            <input id="edad_maxima" type="number" placeholder="Edad máxima" class="swal2-input">
+                        `,
+                        showCancelButton: true,
+                        confirmButtonText: "Insertar",
+                        preConfirm: async () => {
+                            const cantidad = document.getElementById("cantidad").value;
+                            const tipo_usuario = document.getElementById("tipo_usuario").value;
+                            const edad_minima = document.getElementById("edad_minima").value;
+                            const edad_maxima = document.getElementById("edad_maxima").value;
+                            
+                            if (!cantidad || !tipo_usuario) {
+                                Swal.showValidationMessage("Cantidad y tipo de usuario son obligatorios.");
+                                return false;
+                            }
+            
+                            try {
+                                const response = await axios.post("http://127.0.0.1:3000/insertar-usuario", {
+                                    cantidad,
+                                    tipo_usuario,
+                                    edad_minima: edad_minima || null,
+                                    edad_maxima: edad_maxima || null,
+                                });
+            
+                                Swal.fire("Éxito", response.data.message, "success");
+                            } catch (error) {
+                                Swal.fire("Error", "Hubo un problema al insertar usuarios.", "error");
+                            }
+                        },
+                    });
+                }
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>
